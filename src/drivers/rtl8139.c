@@ -56,12 +56,7 @@ static uint16_t rtl_read16(uint16_t reg) {
 }
 
 static uint32_t rtl_read32(uint16_t reg) {
-    uint32_t v = 0;
-    v |= (uint32_t)wnu_inb(io_base + reg);
-    v |= (uint32_t)wnu_inb(io_base + reg + 1) << 8;
-    v |= (uint32_t)wnu_inb(io_base + reg + 2) << 16;
-    v |= (uint32_t)wnu_inb(io_base + reg + 3) << 24;
-    return v;
+    return wnu_inl(io_base + reg);
 }
 
 static void rtl_write8(uint16_t reg, uint8_t value) {
@@ -74,10 +69,7 @@ static void rtl_write16(uint16_t reg, uint16_t value) {
 }
 
 static void rtl_write32(uint16_t reg, uint32_t value) {
-    wnu_outb(io_base + reg, (uint8_t)(value & 0xff));
-    wnu_outb(io_base + reg + 1, (uint8_t)((value >> 8) & 0xff));
-    wnu_outb(io_base + reg + 2, (uint8_t)((value >> 16) & 0xff));
-    wnu_outb(io_base + reg + 3, (uint8_t)((value >> 24) & 0xff));
+    wnu_outl(io_base + reg, value);
 }
 
 static void memory_copy(uint8_t *dst, const uint8_t *src, size_t len) {

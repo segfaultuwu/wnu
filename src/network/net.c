@@ -5,19 +5,22 @@
 #include "wnu/net.h"
 #include "wnu/rtl8139.h"
 
+#define ETH_TYPE_ARP  0x0806
 #define ETH_TYPE_IPV4 0x0800
+
 #define IP_PROTO_ICMP 1
 #define IP_PROTO_UDP  17
+
+#define ARP_OPCODE_REQUEST 1
+#define ARP_OPCODE_REPLY   2
 
 static uint8_t local_ip[4] = {10, 0, 2, 15};
 static uint8_t gateway_ip[4] = {10, 0, 2, 2};
 
-/*
- * QEMU user-net gateway MAC.
- */
-static uint8_t gateway_mac[6] = {
-    0x52, 0x55, 0x0a, 0x00, 0x02, 0x02
-};
+static uint8_t gateway_mac[6];
+static int gateway_mac_ready;
+static int pending_icmp;
+static int pending_udp;
 
 static void memory_copy(uint8_t *dst, const uint8_t *src, size_t len) {
     for (size_t i = 0; i < len; ++i) {
@@ -55,6 +58,9 @@ static uint16_t checksum(const void *data, size_t len) {
 }
 
 void net_init(void) {
+    gateway_mac_ready = 0;
+    pending_icmp = 0;
+    pending_udp = 0;
 }
 
 static void send_icmp_echo(void) {
@@ -123,11 +129,7 @@ static void send_icmp_echo(void) {
     printf("ping: icmp echo sent\n");
 }
 
-void net_ping_qemu_gateway(void) {
-    send_icmp_echo();
-}
-
-void net_udp_test(void) {
+static void send_udp_packet(void) {
     static const char message[] = "hello from WNU\n";
 
     uint16_t src_port = 4444;
@@ -186,9 +188,7 @@ void net_udp_test(void) {
     udp[4] = (uint8_t)(udp_len >> 8);
     udp[5] = (uint8_t)(udp_len & 0xff);
 
-    /*
-     * UDP checksum 0 means disabled for IPv4.
-     */
+    /* UDP checksum 0 means disabled for IPv4. */
     udp[6] = 0;
     udp[7] = 0;
 
@@ -199,12 +199,121 @@ void net_udp_test(void) {
     printf("udp: sent to 10.0.2.2:5555\n");
 }
 
+static void send_arp_request(void);
+
+static void request_gateway_mac(int want_icmp, int want_udp) {
+    pending_icmp |= want_icmp;
+    pending_udp |= want_udp;
+
+    if (gateway_mac_ready) {
+        if (pending_icmp) {
+            pending_icmp = 0;
+            send_icmp_echo();
+        }
+
+        if (pending_udp) {
+            pending_udp = 0;
+            send_udp_packet();
+        }
+
+        return;
+    }
+
+    printf("net: resolving gateway mac...\n");
+    send_arp_request();
+}
+
+static void send_arp_request(void) {
+    uint8_t packet[42];
+
+    const uint8_t broadcast[6] = {
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    };
+
+    const uint8_t zero_mac[6] = {0, 0, 0, 0, 0, 0};
+    const uint8_t *local_mac = rtl8139_get_mac();
+
+    memory_copy(packet + 0, broadcast, 6);
+    memory_copy(packet + 6, local_mac, 6);
+
+    packet[12] = 0x08;
+    packet[13] = 0x06;
+
+    packet[14] = 0x00;
+    packet[15] = 0x01;
+
+    packet[16] = 0x08;
+    packet[17] = 0x00;
+
+    packet[18] = 6;
+    packet[19] = 4;
+
+    packet[20] = 0x00;
+    packet[21] = ARP_OPCODE_REQUEST;
+
+    memory_copy(packet + 22, local_mac, 6);
+    memory_copy(packet + 28, local_ip, 4);
+    memory_copy(packet + 32, zero_mac, 6);
+    memory_copy(packet + 38, gateway_ip, 4);
+
+    rtl8139_send(packet, sizeof(packet));
+}
+
+void net_ping_qemu_gateway(void) {
+    request_gateway_mac(1, 0);
+}
+
+void net_udp_test(void) {
+    request_gateway_mac(0, 1);
+}
+
 void net_handle_packet(const uint8_t *packet, size_t len) {
     if (len < 14) {
         return;
     }
 
     uint16_t eth_type = ((uint16_t)packet[12] << 8) | packet[13];
+
+    if (eth_type == ETH_TYPE_ARP && len >= 42) {
+        const uint8_t *arp = packet + 14;
+
+        uint16_t opcode = ((uint16_t)arp[6] << 8) | arp[7];
+
+        if (opcode != ARP_OPCODE_REPLY) {
+            return;
+        }
+
+        const uint8_t *sender_mac = arp + 8;
+        const uint8_t *sender_ip = arp + 14;
+        const uint8_t *target_ip = arp + 24;
+
+        if (ip_equal(sender_ip, gateway_ip) && ip_equal(target_ip, local_ip)) {
+            memory_copy(gateway_mac, sender_mac, 6);
+            gateway_mac_ready = 1;
+
+            printf(
+                "arp: gateway mac %x:%x:%x:%x:%x:%x\n",
+                gateway_mac[0],
+                gateway_mac[1],
+                gateway_mac[2],
+                gateway_mac[3],
+                gateway_mac[4],
+                gateway_mac[5]
+            );
+
+            if (pending_icmp) {
+                pending_icmp = 0;
+                send_icmp_echo();
+            }
+
+            if (pending_udp) {
+                pending_udp = 0;
+                send_udp_packet();
+            }
+        }
+
+        return;
+    }
 
     if (eth_type != ETH_TYPE_IPV4) {
         return;
