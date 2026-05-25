@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define WNU_VFS_MAX_NODES 128
 #define WNU_VFS_MAX_NAME  64
@@ -38,6 +39,14 @@ int wnu_vfs_write_file(const char *path, const uint8_t *data, size_t size);
 int wnu_vfs_append_file(const char *path, const uint8_t *data, size_t size);
 
 const uint8_t *wnu_vfs_read_file(const char *path, size_t *out_size);
+
+static void print_indent(int depth) {
+    for (int i = 0; i < depth; ++i) {
+        printf("  ");
+    }
+}
+
+void wnu_vfs_tree(const char *path);
 
 void wnu_vfs_list_dir(const char *path);
 

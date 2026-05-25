@@ -150,6 +150,74 @@ static int parent_exists_and_is_dir(const char *path) {
     return node->type == WNU_VFS_DIR;
 }
 
+static const char *path_basename(const char *path) {
+    size_t len = string_len(path);
+
+    if (len == 0 || string_equal(path, "/")) {
+        return "/";
+    }
+
+    size_t last_slash = 0;
+
+    for (size_t i = 0; i < len; ++i) {
+        if (path[i] == '/') {
+            last_slash = i;
+        }
+    }
+
+    return path + last_slash + 1;
+}
+
+static int is_direct_child(const char *parent, const char *child) {
+    if (string_equal(parent, child)) {
+        return 0;
+    }
+
+    if (string_equal(parent, "/")) {
+        if (child[0] != '/') {
+            return 0;
+        }
+
+        const char *rest = child + 1;
+
+        if (rest[0] == '\0') {
+            return 0;
+        }
+
+        for (size_t i = 0; rest[i] != '\0'; ++i) {
+            if (rest[i] == '/') {
+                return 0;
+            }
+        }
+
+        return 1;
+    }
+
+    size_t parent_len = string_len(parent);
+
+    if (!string_starts_with(child, parent)) {
+        return 0;
+    }
+
+    if (child[parent_len] != '/') {
+        return 0;
+    }
+
+    const char *rest = child + parent_len + 1;
+
+    if (rest[0] == '\0') {
+        return 0;
+    }
+
+    for (size_t i = 0; rest[i] != '\0'; ++i) {
+        if (rest[i] == '/') {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 void wnu_vfs_init(void) {
     for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         nodes[i].used = 0;
@@ -171,10 +239,20 @@ void wnu_vfs_init(void) {
     wnu_vfs_create_dir("/etc");
     wnu_vfs_create_dir("/home");
     wnu_vfs_create_dir("/tmp");
+
     wnu_vfs_create_file("/etc/os-release");
+
+    static const char os_release[] =
+        "NAME=WNU\n"
+        "ID=unix-like\n"
+        "HOME_URL=https://github.com/segfaultuwu/wnu\n";
+
     wnu_vfs_write_file(
         "/etc/os-release",
-        (const uint8_t *)"NAME=WNU\nID=unix-like\nHOME_URL=https://github.com/segfaultuwu/wnu\n", sizeof("NAME=WNU\nID=unix-like\nHOME_URL=https://github.com/segfaultuwu/wnu"));
+        (const uint8_t *)os_release,
+        string_len(os_release)
+    );
+
     wnu_vfs_create_file("/hello.txt");
     wnu_vfs_write_file(
         "/hello.txt",
@@ -283,7 +361,7 @@ int wnu_vfs_delete(const char *path) {
     }
 
     /*
-     * Nie usuwaj niepustych katalogów.
+     * Do not delete non-empty directories.
      */
     if (node->type == WNU_VFS_DIR) {
         size_t prefix_len = string_len(path);
@@ -410,74 +488,16 @@ void wnu_vfs_list_dir(const char *path) {
         return;
     }
 
-    size_t path_len = string_len(path);
-
     for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         if (!nodes[i].used) {
             continue;
         }
 
-        if (string_equal(nodes[i].path, path)) {
+        if (!is_direct_child(path, nodes[i].path)) {
             continue;
         }
 
-        const char *node_path = nodes[i].path;
-
-        if (string_equal(path, "/")) {
-            if (node_path[0] != '/') {
-                continue;
-            }
-
-            const char *rest = node_path + 1;
-
-            if (rest[0] == '\0') {
-                continue;
-            }
-
-            int direct_child = 1;
-
-            for (size_t j = 0; rest[j] != '\0'; ++j) {
-                if (rest[j] == '/') {
-                    direct_child = 0;
-                    break;
-                }
-            }
-
-            if (!direct_child) {
-                continue;
-            }
-
-            wnu_console_write(rest);
-        } else {
-            if (!string_starts_with(node_path, path)) {
-                continue;
-            }
-
-            if (node_path[path_len] != '/') {
-                continue;
-            }
-
-            const char *rest = node_path + path_len + 1;
-
-            if (rest[0] == '\0') {
-                continue;
-            }
-
-            int direct_child = 1;
-
-            for (size_t j = 0; rest[j] != '\0'; ++j) {
-                if (rest[j] == '/') {
-                    direct_child = 0;
-                    break;
-                }
-            }
-
-            if (!direct_child) {
-                continue;
-            }
-
-            wnu_console_write(rest);
-        }
+        wnu_console_write(path_basename(nodes[i].path));
 
         if (nodes[i].type == WNU_VFS_DIR) {
             wnu_console_write("/");
@@ -485,4 +505,62 @@ void wnu_vfs_list_dir(const char *path) {
 
         wnu_console_putchar('\n');
     }
+}
+
+static void tree_indent(int depth) {
+    for (int i = 0; i < depth; ++i) {
+        wnu_console_write("  ");
+    }
+}
+
+static void tree_walk(const char *path, int depth) {
+    struct wnu_vfs_node *node = find_node(path);
+
+    if (node == 0) {
+        return;
+    }
+
+    tree_indent(depth);
+
+    if (string_equal(path, "/")) {
+        wnu_console_write("/");
+    } else {
+        wnu_console_write(path_basename(node->path));
+    }
+
+    if (node->type == WNU_VFS_DIR && !string_equal(path, "/")) {
+        wnu_console_write("/");
+    }
+
+    wnu_console_putchar('\n');
+
+    if (node->type != WNU_VFS_DIR) {
+        return;
+    }
+
+    for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
+        if (!nodes[i].used) {
+            continue;
+        }
+
+        if (!is_direct_child(path, nodes[i].path)) {
+            continue;
+        }
+
+        tree_walk(nodes[i].path, depth + 1);
+    }
+}
+
+void wnu_vfs_tree(const char *path) {
+    if (!valid_path(path)) {
+        wnu_console_write("tree: invalid path\n");
+        return;
+    }
+
+    if (!wnu_vfs_exists(path)) {
+        wnu_console_write("tree: not found\n");
+        return;
+    }
+
+    tree_walk(path, 0);
 }

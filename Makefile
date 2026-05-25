@@ -55,7 +55,8 @@ QEMUFLAGS := \
 	-no-shutdown \
 	-debugcon file:debug.log \
 	-d int,cpu_reset,guest_errors \
-	-D qemu.log
+	-D qemu.log \
+	-netdev user,id=net0 -device rtl8139,netdev=net0
 
 QEMUFLAGS_KVM := \
 	$(QEMUFLAGS) \

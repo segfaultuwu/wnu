@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "wnu/arch.h"
 #include "wnu/config.h"
@@ -11,12 +12,20 @@
 #include "wnu/platform.h"
 #include "wnu/shell.h"
 #include "wnu/vfs.h"
+#include "wnu/rtl8139.h"
+#include "wnu/net.h"
 
 __attribute__((used, section(".limine_reqs_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
 
 __attribute__((used, section(".limine_reqs")))
 static volatile LIMINE_BASE_REVISION(0);
+
+__attribute__((used, section(".limine_reqs")))
+static volatile struct limine_kernel_address_request kernel_address_request = {
+    LIMINE_KERNEL_ADDRESS_REQUEST,
+    .revision = 0,
+};
 
 __attribute__((used, section(".limine_reqs")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -34,6 +43,9 @@ __attribute__((used, section(".limine_reqs_end")))
 static volatile LIMINE_REQUESTS_END_MARKER;
 
 extern unsigned char _binary_assets_ter_u16n_psf_start[];
+
+uint64_t wnu_kernel_virt_base;
+uint64_t wnu_kernel_phys_base;
 
 struct psf2_header {
     uint32_t magic;
@@ -55,6 +67,16 @@ static void panic(void) {
     }
 }
 
+static void kernel_address_init(void) {
+    if (kernel_address_request.response == 0) {
+        // todo: add a proper panic message here. This should never happen on a compliant limine bootloader, but it would be nice to know if it does.
+        // panic("missing kernel address response");
+        panic();
+    }
+
+    wnu_kernel_virt_base = kernel_address_request.response->virtual_base;
+    wnu_kernel_phys_base = kernel_address_request.response->physical_base;
+}
 
 static void font_init(void) {
     struct psf2_header *header =
@@ -97,6 +119,14 @@ void _start(void) {
         panic();
     }
 
+    if (kernel_address_request.response == 0) {
+        // todo: add a proper panic message here. This should never happen on a compliant limine bootloader, but it would be nice to know if it does.
+        // panic("missing kernel address response");
+        panic();
+    }
+
+    kernel_address_init();
+
     framebuffer_init();
     font_init();
 
@@ -104,9 +134,10 @@ void _start(void) {
     wnu_console_clear();
 
     wnu_vfs_init();
-
+    rtl8139_init();
+    net_init();
     wnu_console_write(BANNER);
-
+    printf("Test %d printf()\n", 1);
     wnu_shell_init();
 
     wnu_keyboard_init();
@@ -116,6 +147,8 @@ void _start(void) {
     char line[256];
 
     while (true) {
+        rtl8139_poll();
+
         if (wnu_console_line_ready()) {
             wnu_console_readline(line, sizeof(line));
 
@@ -123,7 +156,5 @@ void _start(void) {
 
             wnu_shell_print_prompt();
         }
-
-        wnu_halt();
     }
 }

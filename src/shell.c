@@ -4,7 +4,9 @@
 #include "wnu/config.h"
 #include "wnu/console.h"
 #include "wnu/shell.h"
+#include "wnu/net.h"
 #include "wnu/vfs.h"
+#include <stdlib.h>
 
 #define PATH_MAX 64
 
@@ -151,6 +153,7 @@ static void print_help(void) {
     wnu_console_write("  touch <path>\n");
     wnu_console_write("  mkdir <path>\n");
     wnu_console_write("  rm <path>\n");
+    wnu_console_write("  tree <path>\n");
     wnu_console_write("  write <path> <text>\n");
 }
 
@@ -293,6 +296,23 @@ void wnu_shell_execute(const char *line) {
         return;
     }
 
+    if (string_equal(line, "tree")) {
+        wnu_vfs_tree(current_dir);
+        return;
+    }
+
+    if (string_starts_with(line, "tree ")) {
+        char path[PATH_MAX];
+
+        if (!resolve_path(line + 5, path, PATH_MAX)) {
+            wnu_console_write("tree: invalid path\n");
+            return;
+        }
+
+        wnu_vfs_tree(path);
+        return;
+    }
+
     if (string_starts_with(line, "rm ")) {
         char path[PATH_MAX];
 
@@ -305,6 +325,21 @@ void wnu_shell_execute(const char *line) {
             wnu_console_write("rm: failed\n");
         }
 
+        return;
+    }
+
+    if (string_equal(line, "ping")) {
+        net_ping_qemu_gateway();
+        return;
+    }
+
+    if (string_equal(line, "ping")) {
+        net_ping_qemu_gateway();
+        return;
+    }
+
+    if (string_equal(line, "udp")) {
+        net_udp_test();
         return;
     }
 
