@@ -357,18 +357,26 @@ void wnu_shell_execute(const char *line) {
 	if (string_starts_with(line, "mount ")) {
 		/* mount <dev> <mountpoint> */
 		const char *args = line + 6;
-		/* find space */
+		/* find space (allow multiple spaces between args) */
 		size_t i = 0;
 		while (args[i] != '\0' && args[i] != ' ') i++;
-		if (args[i] != ' ') {
+		if (args[i] == '\0') {
+			wnu_console_write("usage: mount <dev> <mountpoint>\n");
+			return;
+		}
+		/* skip any additional spaces */
+		size_t k = i;
+		while (args[k] == ' ') k++;
+		if (args[k] == '\0') {
 			wnu_console_write("usage: mount <dev> <mountpoint>\n");
 			return;
 		}
 		char dev[PATH_MAX];
-		for (size_t j = 0; j < i && j + 1 < PATH_MAX; ++j) dev[j] = args[j];
-		dev[i] = '\0';
+		size_t j = 0;
+		for (; j < i && j + 1 < PATH_MAX; ++j) dev[j] = args[j];
+		dev[j] = '\0';
 		char mp[PATH_MAX];
-		if (!resolve_path(args + i + 1, mp, PATH_MAX)) {
+		if (!resolve_path(args + k, mp, PATH_MAX)) {
 			wnu_console_write("mount: invalid mountpoint\n");
 			return;
 		}

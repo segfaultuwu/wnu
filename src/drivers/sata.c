@@ -243,7 +243,9 @@ static int sata_block_read(void *driver_data, uint64_t lba, void *buf, size_t co
     uintptr_t abar_virt = phys_to_virt(abar_phys);
 
     uint32_t pi = mmio_read32(abar_virt, AHCI_REG_PI);
-    printf("sata_block_read: ctrl_idx=%d pi=0x%x lba=%llu count=%zu\n", ctrl_idx, pi, (unsigned long long)lba, count);
+    uint32_t cap = mmio_read32(abar_virt, AHCI_REG_CAP);
+    printf("sata_block_read: ctrl_idx=%d bar5=0x%x abar_phys=0x%lx abar_virt=0x%lx cap=0x%x pi=0x%x lba=%lu count=%u\n",
+        ctrl_idx, bar5, (unsigned long)abar_phys, (unsigned long)abar_virt, cap, pi, (unsigned long)lba, (unsigned)count);
 
     /* find first active port */
     int port = -1;
