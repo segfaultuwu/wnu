@@ -58,6 +58,9 @@ QEMUFLAGS := \
 	-D qemu.log \
 	-netdev user,id=net0 -device rtl8139,netdev=net0
 
+# FAT32 disk image to create in build/ and attach to QEMU as a drive
+DISK_IMAGE := $(BUILD_DIR)/disk.img
+
 QEMUFLAGS_KVM := \
 	$(QEMUFLAGS) \
 	-enable-kvm \
@@ -163,6 +166,27 @@ $(ISO_IMAGE): check $(ISO_ROOT)/kernel $(LIMINE_FILES)
 		$(ISO_ROOT) \
 		-o $@
 	$(LIMINE) bios-install $@
+
+$(DISK_IMAGE): | $(BUILD_DIR)
+	@echo "Creating FAT32 disk image: $@"
+	@dd if=/dev/zero of=$@ bs=1M count=64 >/dev/null 2>&1 || { echo "dd failed"; exit 1; }
+	@if command -v mkfs.fat >/dev/null 2>&1; then \
+		mkfs.fat -F 32 -n WNU $@ >/dev/null 2>&1 || { echo "mkfs.fat failed"; exit 1; }; \
+	elif command -v mkfs.vfat >/dev/null 2>&1; then \
+		mkfs.vfat -F 32 -n WNU $@ >/dev/null 2>&1 || { echo "mkfs.vfat failed"; exit 1; }; \
+	elif command -v mformat >/dev/null 2>&1; then \
+		# mformat requires MTOOLSRC or drive specification; try basic mformat usage \
+		mformat -i $@ :: >/dev/null 2>&1 || { echo "mformat failed"; exit 1; }; \
+	else \
+		echo "no FAT formatter found (mkfs.fat|mkfs.vfat|mformat)"; exit 1; \
+	fi
+
+run-disk: $(ISO_IMAGE) $(DISK_IMAGE)
+	rm -f qemu.log debug.log
+	$(QEMU) $(QEMUFLAGS) \
+		-drive if=none,file=$(DISK_IMAGE),format=raw,id=hd0 \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=hd0,bus=ahci.0
 
 run: $(ISO_IMAGE)
 	rm -f qemu.log debug.log

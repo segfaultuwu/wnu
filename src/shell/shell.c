@@ -6,6 +6,7 @@
 #include "wnu/shell.h"
 #include "wnu/net.h"
 #include "wnu/vfs.h"
+#include "wnu/sata.h"
 #include <stdlib.h>
 
 #define PATH_MAX 64
@@ -337,6 +338,11 @@ void wnu_shell_execute(const char *line) {
 
 	if (string_equal(line, "udp")) {
 		net_udp_test();
+		return;
+	}
+
+	if (string_equal(line, "lsblk")) {
+		wnu_sata_print_devices();
 		return;
 	}
 

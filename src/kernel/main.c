@@ -16,6 +16,7 @@
 #include "wnu/vfs.h"
 #include "wnu/rtl8139.h"
 #include "wnu/net.h"
+#include "wnu/sata.h"
 
 __attribute__((used, section(".limine_reqs_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
@@ -133,6 +134,7 @@ void _start(void) {
 
 	wnu_vfs_init();
 	rtl8139_init();
+	wnu_sata_init();
 	net_init();
 	wnu_console_write(BANNER);
 	printf("Test %d printf()\n", 1);
