@@ -1,9 +1,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "wildnix/arch.h"
-#include "wildnix/keyboard.h"
-#include "wildnix/platform.h"
+#include "wnu/arch.h"
+#include "wnu/keyboard.h"
+#include "wnu/platform.h"
 
 #define KERNEL_CS 0x28
 
@@ -28,35 +28,35 @@ extern void irq1_stub(void);
 
 static void pic_send_eoi(unsigned irq) {
     if (irq >= 8) {
-        wildnix_outb(0xA0, 0x20);
+        wnu_outb(0xA0, 0x20);
     }
 
-    wildnix_outb(0x20, 0x20);
+    wnu_outb(0x20, 0x20);
 }
 
 static void pic_remap_keyboard_only(void) {
-    wildnix_outb(0x21, 0xFF);
-    wildnix_outb(0xA1, 0xFF);
+    wnu_outb(0x21, 0xFF);
+    wnu_outb(0xA1, 0xFF);
 
-    wildnix_outb(0x20, 0x11);
-    wildnix_io_wait();
-    wildnix_outb(0xA0, 0x11);
-    wildnix_io_wait();
+    wnu_outb(0x20, 0x11);
+    wnu_io_wait();
+    wnu_outb(0xA0, 0x11);
+    wnu_io_wait();
 
-    wildnix_outb(0x21, 0x20);
-    wildnix_io_wait();
-    wildnix_outb(0xA1, 0x28);
-    wildnix_io_wait();
+    wnu_outb(0x21, 0x20);
+    wnu_io_wait();
+    wnu_outb(0xA1, 0x28);
+    wnu_io_wait();
 
-    wildnix_outb(0x21, 0x04);
-    wildnix_io_wait();
-    wildnix_outb(0xA1, 0x02);
-    wildnix_io_wait();
+    wnu_outb(0x21, 0x04);
+    wnu_io_wait();
+    wnu_outb(0xA1, 0x02);
+    wnu_io_wait();
 
-    wildnix_outb(0x21, 0x01);
-    wildnix_io_wait();
-    wildnix_outb(0xA1, 0x01);
-    wildnix_io_wait();
+    wnu_outb(0x21, 0x01);
+    wnu_io_wait();
+    wnu_outb(0xA1, 0x01);
+    wnu_io_wait();
 
     /*
      * Only IRQ1 keyboard.
@@ -67,8 +67,8 @@ static void pic_remap_keyboard_only(void) {
 
     master_mask &= (uint8_t)~(1u << 1);
 
-    wildnix_outb(0x21, master_mask);
-    wildnix_outb(0xA1, slave_mask);
+    wnu_outb(0x21, master_mask);
+    wnu_outb(0xA1, slave_mask);
 }
 
 static void set_idt_entry(uint8_t vector, void (*handler)(void)) {
@@ -92,16 +92,16 @@ static void load_idt(void) {
     __asm__ volatile("lidt %0" : : "m"(ptr) : "memory");
 }
 
-void wildnix_irq1_c_handler(void) {
-    uint8_t scancode = wildnix_inb(0x60);
+void wnu_irq1_c_handler(void) {
+    uint8_t scancode = wnu_inb(0x60);
 
-    wildnix_keyboard_handle_scancode(scancode);
+    wnu_keyboard_handle_scancode(scancode);
 
     pic_send_eoi(1);
 }
 
-void wildnix_arch_init(void) {
-    wildnix_cli();
+void wnu_arch_init(void) {
+    wnu_cli();
 
     for (size_t i = 0; i < 256; ++i) {
         idt[i] = (struct idt_entry){0};

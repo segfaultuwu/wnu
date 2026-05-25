@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "wildnix/console.h"
-#include "wildnix/keyboard.h"
-#include "wildnix/platform.h"
+#include "wnu/console.h"
+#include "wnu/keyboard.h"
+#include "wnu/platform.h"
 
 static bool left_shift;
 static bool right_shift;
@@ -12,7 +12,7 @@ static bool extended;
 
 static bool ps2_wait_input(void) {
     for (uint64_t i = 0; i < 1000000; ++i) {
-        if ((wildnix_inb(0x64) & 0x02u) == 0) {
+        if ((wnu_inb(0x64) & 0x02u) == 0) {
             return true;
         }
     }
@@ -22,7 +22,7 @@ static bool ps2_wait_input(void) {
 
 static bool ps2_wait_output(void) {
     for (uint64_t i = 0; i < 1000000; ++i) {
-        if ((wildnix_inb(0x64) & 0x01u) != 0) {
+        if ((wnu_inb(0x64) & 0x01u) != 0) {
             return true;
         }
     }
@@ -32,11 +32,11 @@ static bool ps2_wait_output(void) {
 
 static void ps2_flush(void) {
     for (uint64_t i = 0; i < 1024; ++i) {
-        if ((wildnix_inb(0x64) & 0x01u) == 0) {
+        if ((wnu_inb(0x64) & 0x01u) == 0) {
             return;
         }
 
-        (void)wildnix_inb(0x60);
+        (void)wnu_inb(0x60);
     }
 }
 
@@ -45,7 +45,7 @@ static bool ps2_write_command(uint8_t command) {
         return false;
     }
 
-    wildnix_outb(0x64, command);
+    wnu_outb(0x64, command);
     return true;
 }
 
@@ -54,7 +54,7 @@ static bool ps2_write_data(uint8_t data) {
         return false;
     }
 
-    wildnix_outb(0x60, data);
+    wnu_outb(0x60, data);
     return true;
 }
 
@@ -63,7 +63,7 @@ static bool ps2_read_data(uint8_t *out) {
         return false;
     }
 
-    *out = wildnix_inb(0x60);
+    *out = wnu_inb(0x60);
     return true;
 }
 
@@ -144,7 +144,7 @@ static char scancode_to_ascii(uint8_t scancode) {
     }
 }
 
-void wildnix_keyboard_init(void) {
+void wnu_keyboard_init(void) {
     left_shift = false;
     right_shift = false;
     caps_lock = false;
@@ -181,7 +181,7 @@ void wildnix_keyboard_init(void) {
     keyboard_write(0xF4);
 }
 
-void wildnix_keyboard_handle_scancode(uint8_t data) {
+void wnu_keyboard_handle_scancode(uint8_t data) {
     if (data == 0xE0) {
         extended = true;
         return;
@@ -221,18 +221,18 @@ void wildnix_keyboard_handle_scancode(uint8_t data) {
     }
 
     if (scancode == 0x1C) {
-        wildnix_console_push_input('\n');
+        wnu_console_push_input('\n');
         return;
     }
 
     if (scancode == 0x0E) {
-        wildnix_console_push_input('\b');
+        wnu_console_push_input('\b');
         return;
     }
 
     char c = scancode_to_ascii(scancode);
 
     if (c != 0) {
-        wildnix_console_push_input(c);
+        wnu_console_push_input(c);
     }
 }

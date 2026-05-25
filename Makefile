@@ -1,4 +1,4 @@
-PROJECT := wildnix-next
+PROJECT := wnu
 VERSION := 0.1.0
 
 ARCH ?= x86_64
@@ -11,6 +11,7 @@ LIMINE_DIR ?= /home/segfault/limine-bin
 LIMINE := $(LIMINE_DIR)/limine
 
 CC := gcc
+ASM := nasm
 LD := ld
 OBJDUMP := objdump
 NM := nm
@@ -74,10 +75,10 @@ LIMINE_FILES := \
 	$(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
 
 C_SRCS := $(shell find src -name '*.c')
-ASM_SRCS := $(shell find src -name '*.S')
+ASM_SRCS := $(shell find src -name '*.asm')
 
 C_OBJS := $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(C_SRCS))
-ASM_OBJS := $(patsubst src/%.S,$(BUILD_DIR)/%.o,$(ASM_SRCS))
+ASM_OBJS := $(patsubst src/%.asm,$(BUILD_DIR)/%.o,$(ASM_SRCS))
 
 OBJS := $(C_OBJS) $(ASM_OBJS)
 DEPS := $(OBJS:.o=.d)
@@ -118,9 +119,9 @@ $(BUILD_DIR)/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: src/%.S
+$(BUILD_DIR)/%.o: src/%.asm
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(ASM) -f elf64 $< -o $@
 
 $(FONT_OBJ): assets/ter-u16n.psf
 	@mkdir -p $(dir $@)

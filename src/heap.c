@@ -1,14 +1,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "wildnix/heap.h"
+#include "wnu/heap.h"
 
 #define HEAP_SIZE (1024 * 1024)
 
 static uint8_t heap[HEAP_SIZE];
 static size_t heap_offset;
 
-void wildnix_heap_init(void) {
+void wnu_heap_init(void) {
     heap_offset = 0;
 }
 
@@ -16,7 +16,7 @@ static size_t align_up(size_t value, size_t align) {
     return (value + align - 1) & ~(align - 1);
 }
 
-void *wildnix_malloc(size_t size) {
+void *wnu_malloc(size_t size) {
     if (size == 0) {
         return 0;
     }
@@ -33,6 +33,6 @@ void *wildnix_malloc(size_t size) {
     return ptr;
 }
 
-void wildnix_free(void *ptr) {
+void wnu_free(void *ptr) {
     (void)ptr;
 }

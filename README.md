@@ -1,4 +1,4 @@
-# WildNix Next
+# WNU's not Unix
 
 A tiny OS in C
 

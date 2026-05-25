@@ -1,9 +1,9 @@
-.intel_syntax noprefix
+BITS 64
 
-.global irq1_stub
-.extern wildnix_irq1_c_handler
+global irq1_stub
+extern wnu_irq1_c_handler
 
-.macro PUSH_REGS
+%macro PUSH_REGS 0
     push rax
     push rcx
     push rdx
@@ -19,9 +19,9 @@
     push r13
     push r14
     push r15
-.endm
+%endmacro
 
-.macro POP_REGS
+%macro POP_REGS 0
     pop r15
     pop r14
     pop r13
@@ -37,13 +37,20 @@
     pop rdx
     pop rcx
     pop rax
-.endm
+%endmacro
+
+section .text
 
 irq1_stub:
     cld
+
     PUSH_REGS
+
+    ; align stack before call
     sub rsp, 8
-    call wildnix_irq1_c_handler
+    call wnu_irq1_c_handler
     add rsp, 8
+
     POP_REGS
+
     iretq

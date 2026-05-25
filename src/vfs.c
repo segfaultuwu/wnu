@@ -2,10 +2,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "wildnix/console.h"
-#include "wildnix/vfs.h"
+#include "wnu/console.h"
+#include "wnu/vfs.h"
 
-static struct wildnix_vfs_node nodes[WILDNIX_VFS_MAX_NODES];
+static struct wnu_vfs_node nodes[WNU_VFS_MAX_NODES];
 static uint64_t next_inode;
 
 static size_t string_len(const char *s) {
@@ -61,8 +61,8 @@ static void string_copy(char *dst, const char *src, size_t max) {
     dst[i] = '\0';
 }
 
-static struct wildnix_vfs_node *find_node(const char *path) {
-    for (size_t i = 0; i < WILDNIX_VFS_MAX_NODES; ++i) {
+static struct wnu_vfs_node *find_node(const char *path) {
+    for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         if (!nodes[i].used) {
             continue;
         }
@@ -75,8 +75,8 @@ static struct wildnix_vfs_node *find_node(const char *path) {
     return 0;
 }
 
-static struct wildnix_vfs_node *alloc_node(void) {
-    for (size_t i = 0; i < WILDNIX_VFS_MAX_NODES; ++i) {
+static struct wnu_vfs_node *alloc_node(void) {
+    for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         if (!nodes[i].used) {
             nodes[i].used = 1;
             nodes[i].inode = next_inode++;
@@ -98,7 +98,7 @@ static int valid_path(const char *path) {
         return 0;
     }
 
-    if (string_len(path) >= WILDNIX_VFS_MAX_NAME) {
+    if (string_len(path) >= WNU_VFS_MAX_NAME) {
         return 0;
     }
 
@@ -137,21 +137,21 @@ static void parent_path(const char *path, char *out, size_t out_size) {
 }
 
 static int parent_exists_and_is_dir(const char *path) {
-    char parent[WILDNIX_VFS_MAX_NAME];
+    char parent[WNU_VFS_MAX_NAME];
 
     parent_path(path, parent, sizeof(parent));
 
-    struct wildnix_vfs_node *node = find_node(parent);
+    struct wnu_vfs_node *node = find_node(parent);
 
     if (node == 0) {
         return 0;
     }
 
-    return node->type == WILDNIX_VFS_DIR;
+    return node->type == WNU_VFS_DIR;
 }
 
-void wildnix_vfs_init(void) {
-    for (size_t i = 0; i < WILDNIX_VFS_MAX_NODES; ++i) {
+void wnu_vfs_init(void) {
+    for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         nodes[i].used = 0;
         nodes[i].inode = 0;
         nodes[i].size = 0;
@@ -160,54 +160,54 @@ void wildnix_vfs_init(void) {
 
     next_inode = 1;
 
-    struct wildnix_vfs_node *root = alloc_node();
+    struct wnu_vfs_node *root = alloc_node();
 
     if (root != 0) {
-        root->type = WILDNIX_VFS_DIR;
+        root->type = WNU_VFS_DIR;
         string_copy(root->path, "/", sizeof(root->path));
     }
 
-    wildnix_vfs_create_dir("/bin");
-    wildnix_vfs_create_dir("/etc");
-    wildnix_vfs_create_dir("/home");
-    wildnix_vfs_create_dir("/tmp");
-    wildnix_vfs_create_file("/etc/os-release");
-    wildnix_vfs_write_file(
+    wnu_vfs_create_dir("/bin");
+    wnu_vfs_create_dir("/etc");
+    wnu_vfs_create_dir("/home");
+    wnu_vfs_create_dir("/tmp");
+    wnu_vfs_create_file("/etc/os-release");
+    wnu_vfs_write_file(
         "/etc/os-release",
-        (const uint8_t *)"NAME=WildNIX Next\nID=unix-like\nHOME_URL=https://github.com/wildnix/wildnix-next", sizeof("NAME=WildNIX Next\nID=unix-like\nHOME_URL=https://github.com/wildnix/wildnix-next"));
-    wildnix_vfs_create_file("/hello.txt");
-    wildnix_vfs_write_file(
+        (const uint8_t *)"NAME=WNU\nID=unix-like\nHOME_URL=https://github.com/segfaultuwu/wnu\n", sizeof("NAME=WNU\nID=unix-like\nHOME_URL=https://github.com/segfaultuwu/wnu"));
+    wnu_vfs_create_file("/hello.txt");
+    wnu_vfs_write_file(
         "/hello.txt",
         (const uint8_t *)"hello from vfs\n",
         15
     );
 }
 
-int wildnix_vfs_exists(const char *path) {
+int wnu_vfs_exists(const char *path) {
     return find_node(path) != 0;
 }
 
-int wildnix_vfs_is_dir(const char *path) {
-    struct wildnix_vfs_node *node = find_node(path);
+int wnu_vfs_is_dir(const char *path) {
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
     }
 
-    return node->type == WILDNIX_VFS_DIR;
+    return node->type == WNU_VFS_DIR;
 }
 
-int wildnix_vfs_is_file(const char *path) {
-    struct wildnix_vfs_node *node = find_node(path);
+int wnu_vfs_is_file(const char *path) {
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
     }
 
-    return node->type == WILDNIX_VFS_FILE;
+    return node->type == WNU_VFS_FILE;
 }
 
-int wildnix_vfs_create_file(const char *path) {
+int wnu_vfs_create_file(const char *path) {
     if (!valid_path(path)) {
         return 0;
     }
@@ -224,20 +224,20 @@ int wildnix_vfs_create_file(const char *path) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = alloc_node();
+    struct wnu_vfs_node *node = alloc_node();
 
     if (node == 0) {
         return 0;
     }
 
-    node->type = WILDNIX_VFS_FILE;
+    node->type = WNU_VFS_FILE;
     node->size = 0;
     string_copy(node->path, path, sizeof(node->path));
 
     return 1;
 }
 
-int wildnix_vfs_create_dir(const char *path) {
+int wnu_vfs_create_dir(const char *path) {
     if (!valid_path(path)) {
         return 0;
     }
@@ -254,20 +254,20 @@ int wildnix_vfs_create_dir(const char *path) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = alloc_node();
+    struct wnu_vfs_node *node = alloc_node();
 
     if (node == 0) {
         return 0;
     }
 
-    node->type = WILDNIX_VFS_DIR;
+    node->type = WNU_VFS_DIR;
     node->size = 0;
     string_copy(node->path, path, sizeof(node->path));
 
     return 1;
 }
 
-int wildnix_vfs_delete(const char *path) {
+int wnu_vfs_delete(const char *path) {
     if (!valid_path(path)) {
         return 0;
     }
@@ -276,7 +276,7 @@ int wildnix_vfs_delete(const char *path) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = find_node(path);
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
@@ -285,10 +285,10 @@ int wildnix_vfs_delete(const char *path) {
     /*
      * Nie usuwaj niepustych katalogów.
      */
-    if (node->type == WILDNIX_VFS_DIR) {
+    if (node->type == WNU_VFS_DIR) {
         size_t prefix_len = string_len(path);
 
-        for (size_t i = 0; i < WILDNIX_VFS_MAX_NODES; ++i) {
+        for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
             if (!nodes[i].used) {
                 continue;
             }
@@ -308,23 +308,23 @@ int wildnix_vfs_delete(const char *path) {
     return 1;
 }
 
-int wildnix_vfs_write_file(const char *path, const uint8_t *data, size_t size) {
+int wnu_vfs_write_file(const char *path, const uint8_t *data, size_t size) {
     if (!valid_path(path) || data == 0) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = find_node(path);
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
     }
 
-    if (node->type != WILDNIX_VFS_FILE) {
+    if (node->type != WNU_VFS_FILE) {
         return 0;
     }
 
-    if (size > WILDNIX_VFS_MAX_DATA) {
-        size = WILDNIX_VFS_MAX_DATA;
+    if (size > WNU_VFS_MAX_DATA) {
+        size = WNU_VFS_MAX_DATA;
     }
 
     for (size_t i = 0; i < size; ++i) {
@@ -336,22 +336,22 @@ int wildnix_vfs_write_file(const char *path, const uint8_t *data, size_t size) {
     return 1;
 }
 
-int wildnix_vfs_append_file(const char *path, const uint8_t *data, size_t size) {
+int wnu_vfs_append_file(const char *path, const uint8_t *data, size_t size) {
     if (!valid_path(path) || data == 0) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = find_node(path);
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
     }
 
-    if (node->type != WILDNIX_VFS_FILE) {
+    if (node->type != WNU_VFS_FILE) {
         return 0;
     }
 
-    size_t available = WILDNIX_VFS_MAX_DATA - node->size;
+    size_t available = WNU_VFS_MAX_DATA - node->size;
 
     if (size > available) {
         size = available;
@@ -366,7 +366,7 @@ int wildnix_vfs_append_file(const char *path, const uint8_t *data, size_t size) 
     return 1;
 }
 
-const uint8_t *wildnix_vfs_read_file(const char *path, size_t *out_size) {
+const uint8_t *wnu_vfs_read_file(const char *path, size_t *out_size) {
     if (out_size != 0) {
         *out_size = 0;
     }
@@ -375,13 +375,13 @@ const uint8_t *wildnix_vfs_read_file(const char *path, size_t *out_size) {
         return 0;
     }
 
-    struct wildnix_vfs_node *node = find_node(path);
+    struct wnu_vfs_node *node = find_node(path);
 
     if (node == 0) {
         return 0;
     }
 
-    if (node->type != WILDNIX_VFS_FILE) {
+    if (node->type != WNU_VFS_FILE) {
         return 0;
     }
 
@@ -392,27 +392,27 @@ const uint8_t *wildnix_vfs_read_file(const char *path, size_t *out_size) {
     return node->data;
 }
 
-void wildnix_vfs_list_dir(const char *path) {
+void wnu_vfs_list_dir(const char *path) {
     if (!valid_path(path)) {
-        wildnix_console_write("invalid path\n");
+        wnu_console_write("invalid path\n");
         return;
     }
 
-    struct wildnix_vfs_node *dir = find_node(path);
+    struct wnu_vfs_node *dir = find_node(path);
 
     if (dir == 0) {
-        wildnix_console_write("not found\n");
+        wnu_console_write("not found\n");
         return;
     }
 
-    if (dir->type != WILDNIX_VFS_DIR) {
-        wildnix_console_write("not a directory\n");
+    if (dir->type != WNU_VFS_DIR) {
+        wnu_console_write("not a directory\n");
         return;
     }
 
     size_t path_len = string_len(path);
 
-    for (size_t i = 0; i < WILDNIX_VFS_MAX_NODES; ++i) {
+    for (size_t i = 0; i < WNU_VFS_MAX_NODES; ++i) {
         if (!nodes[i].used) {
             continue;
         }
@@ -447,7 +447,7 @@ void wildnix_vfs_list_dir(const char *path) {
                 continue;
             }
 
-            wildnix_console_write(rest);
+            wnu_console_write(rest);
         } else {
             if (!string_starts_with(node_path, path)) {
                 continue;
@@ -476,13 +476,13 @@ void wildnix_vfs_list_dir(const char *path) {
                 continue;
             }
 
-            wildnix_console_write(rest);
+            wnu_console_write(rest);
         }
 
-        if (nodes[i].type == WILDNIX_VFS_DIR) {
-            wildnix_console_write("/");
+        if (nodes[i].type == WNU_VFS_DIR) {
+            wnu_console_write("/");
         }
 
-        wildnix_console_putchar('\n');
+        wnu_console_putchar('\n');
     }
 }

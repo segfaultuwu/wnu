@@ -4,12 +4,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "wildnix/arch.h"
-#include "wildnix/console.h"
-#include "wildnix/keyboard.h"
-#include "wildnix/platform.h"
-#include "wildnix/config.h"
-#include "wildnix/vfs.h"
+#include "wnu/arch.h"
+#include "wnu/console.h"
+#include "wnu/keyboard.h"
+#include "wnu/platform.h"
+#include "wnu/config.h"
+#include "wnu/vfs.h"
 
 #define PATH_MAX 64
 
@@ -47,14 +47,14 @@ struct psf2_header {
     uint32_t width;
 } __attribute__((packed));
 
-static struct wildnix_framebuffer framebuffer;
-static struct wildnix_font font;
+static struct wnu_framebuffer framebuffer;
+static struct wnu_font font;
 
 static char current_dir[PATH_MAX] = "/";
 
 static void panic(void) {
     while (true) {
-        wildnix_halt();
+        wnu_halt();
     }
 }
 
@@ -187,8 +187,8 @@ static int resolve_path(const char *input, char *out, size_t out_size) {
 }
 
 static void print_prompt(void) {
-    wildnix_console_write(current_dir);
-    wildnix_console_write(" % ");
+    wnu_console_write(current_dir);
+    wnu_console_write(" % ");
 }
 
 static void font_init(void) {
@@ -231,43 +231,43 @@ static void shell_execute(const char *line) {
     }
 
     if (string_equal(line, "help")) {
-        wildnix_console_write("commands:\n");
-        wildnix_console_write("  help\n");
-        wildnix_console_write("  clear\n");
-        wildnix_console_write("  about\n");
-        wildnix_console_write("  echo <text>\n");
-        wildnix_console_write("  pwd\n");
-        wildnix_console_write("  cd <path>\n");
-        wildnix_console_write("  ls [path]\n");
-        wildnix_console_write("  cat <path>\n");
-        wildnix_console_write("  touch <path>\n");
-        wildnix_console_write("  mkdir <path>\n");
-        wildnix_console_write("  rm <path>\n");
-        wildnix_console_write("  write <path> <text>\n");
+        wnu_console_write("commands:\n");
+        wnu_console_write("  help\n");
+        wnu_console_write("  clear\n");
+        wnu_console_write("  about\n");
+        wnu_console_write("  echo <text>\n");
+        wnu_console_write("  pwd\n");
+        wnu_console_write("  cd <path>\n");
+        wnu_console_write("  ls [path]\n");
+        wnu_console_write("  cat <path>\n");
+        wnu_console_write("  touch <path>\n");
+        wnu_console_write("  mkdir <path>\n");
+        wnu_console_write("  rm <path>\n");
+        wnu_console_write("  write <path> <text>\n");
         return;
     }
 
     if (string_equal(line, "clear")) {
-        wildnix_console_clear();
+        wnu_console_clear();
         return;
     }
 
     if (string_equal(line, "about")) {
-        wildnix_console_write("WildNIX v");
-        wildnix_console_write(WILDNIX_VERSION);
-        wildnix_console_putchar('\n');
+        wnu_console_write("WNU v");
+        wnu_console_write(WNU_VERSION);
+        wnu_console_putchar('\n');
         return;
     }
 
     if (string_equal(line, "pwd")) {
-        wildnix_console_write(current_dir);
-        wildnix_console_putchar('\n');
+        wnu_console_write(current_dir);
+        wnu_console_putchar('\n');
         return;
     }
 
     if (string_starts_with(line, "echo ")) {
-        wildnix_console_write(line + 5);
-        wildnix_console_putchar('\n');
+        wnu_console_write(line + 5);
+        wnu_console_putchar('\n');
         return;
     }
 
@@ -275,17 +275,17 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 3, path, PATH_MAX)) {
-            wildnix_console_write("cd: invalid path\n");
+            wnu_console_write("cd: invalid path\n");
             return;
         }
 
-        if (!wildnix_vfs_exists(path)) {
-            wildnix_console_write("cd: no such file or directory\n");
+        if (!wnu_vfs_exists(path)) {
+            wnu_console_write("cd: no such file or directory\n");
             return;
         }
 
-        if (!wildnix_vfs_is_dir(path)) {
-            wildnix_console_write("cd: not a directory\n");
+        if (!wnu_vfs_is_dir(path)) {
+            wnu_console_write("cd: not a directory\n");
             return;
         }
 
@@ -294,7 +294,7 @@ static void shell_execute(const char *line) {
     }
 
     if (string_equal(line, "ls")) {
-        wildnix_vfs_list_dir(current_dir);
+        wnu_vfs_list_dir(current_dir);
         return;
     }
 
@@ -302,11 +302,11 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 3, path, PATH_MAX)) {
-            wildnix_console_write("ls: invalid path\n");
+            wnu_console_write("ls: invalid path\n");
             return;
         }
 
-        wildnix_vfs_list_dir(path);
+        wnu_vfs_list_dir(path);
         return;
     }
 
@@ -314,22 +314,22 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 4, path, PATH_MAX)) {
-            wildnix_console_write("cat: invalid path\n");
+            wnu_console_write("cat: invalid path\n");
             return;
         }
 
         size_t size = 0;
-        const uint8_t *data = wildnix_vfs_read_file(path, &size);
+        const uint8_t *data = wnu_vfs_read_file(path, &size);
 
         if (data == 0) {
-            wildnix_console_write("cat: cannot read file\n");
+            wnu_console_write("cat: cannot read file\n");
             return;
         }
 
-        wildnix_console_write_len((const char *)data, size);
+        wnu_console_write_len((const char *)data, size);
 
         if (size == 0 || data[size - 1] != '\n') {
-            wildnix_console_putchar('\n');
+            wnu_console_putchar('\n');
         }
 
         return;
@@ -339,12 +339,12 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 6, path, PATH_MAX)) {
-            wildnix_console_write("touch: invalid path\n");
+            wnu_console_write("touch: invalid path\n");
             return;
         }
 
-        if (!wildnix_vfs_create_file(path)) {
-            wildnix_console_write("touch: failed\n");
+        if (!wnu_vfs_create_file(path)) {
+            wnu_console_write("touch: failed\n");
         }
 
         return;
@@ -354,12 +354,12 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 6, path, PATH_MAX)) {
-            wildnix_console_write("mkdir: invalid path\n");
+            wnu_console_write("mkdir: invalid path\n");
             return;
         }
 
-        if (!wildnix_vfs_create_dir(path)) {
-            wildnix_console_write("mkdir: failed\n");
+        if (!wnu_vfs_create_dir(path)) {
+            wnu_console_write("mkdir: failed\n");
         }
 
         return;
@@ -369,12 +369,12 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(line + 3, path, PATH_MAX)) {
-            wildnix_console_write("rm: invalid path\n");
+            wnu_console_write("rm: invalid path\n");
             return;
         }
 
-        if (!wildnix_vfs_delete(path)) {
-            wildnix_console_write("rm: failed\n");
+        if (!wnu_vfs_delete(path)) {
+            wnu_console_write("rm: failed\n");
         }
 
         return;
@@ -394,14 +394,14 @@ static void shell_execute(const char *line) {
         }
 
         if (args[i] != ' ') {
-            wildnix_console_write("usage: write /file text\n");
+            wnu_console_write("usage: write /file text\n");
             return;
         }
 
         char raw_path[PATH_MAX];
 
         if (i >= PATH_MAX) {
-            wildnix_console_write("path too long\n");
+            wnu_console_write("path too long\n");
             return;
         }
 
@@ -414,30 +414,30 @@ static void shell_execute(const char *line) {
         char path[PATH_MAX];
 
         if (!resolve_path(raw_path, path, PATH_MAX)) {
-            wildnix_console_write("write: invalid path\n");
+            wnu_console_write("write: invalid path\n");
             return;
         }
 
         const char *text = args + i + 1;
 
-        if (!wildnix_vfs_exists(path)) {
-            wildnix_vfs_create_file(path);
+        if (!wnu_vfs_exists(path)) {
+            wnu_vfs_create_file(path);
         }
 
-        if (!wildnix_vfs_write_file(path, (const uint8_t *)text, string_len(text))) {
-            wildnix_console_write("write: failed\n");
+        if (!wnu_vfs_write_file(path, (const uint8_t *)text, string_len(text))) {
+            wnu_console_write("write: failed\n");
         }
 
         return;
     }
 
-    wildnix_console_write("unknown command: ");
-    wildnix_console_write(line);
-    wildnix_console_putchar('\n');
+    wnu_console_write("unknown command: ");
+    wnu_console_write(line);
+    wnu_console_putchar('\n');
 }
 
 void _start(void) {
-    wildnix_cli();
+    wnu_cli();
 
     if (!LIMINE_BASE_REVISION_SUPPORTED) {
         panic();
@@ -446,30 +446,30 @@ void _start(void) {
     framebuffer_init();
     font_init();
 
-    wildnix_console_bind(&framebuffer, &font);
-    wildnix_console_clear();
+    wnu_console_bind(&framebuffer, &font);
+    wnu_console_clear();
 
-    wildnix_vfs_init();
+    wnu_vfs_init();
 
-    wildnix_console_write("WildNIX console ready\n");
-    wildnix_console_write("type 'help'\n");
+    wnu_console_write("WNU console ready\n");
+    wnu_console_write("type 'help'\n");
     print_prompt();
 
-    wildnix_keyboard_init();
-    wildnix_arch_init();
-    wildnix_sti();
+    wnu_keyboard_init();
+    wnu_arch_init();
+    wnu_sti();
 
     char line[256];
 
     while (true) {
-        if (wildnix_console_line_ready()) {
-            wildnix_console_readline(line, sizeof(line));
+        if (wnu_console_line_ready()) {
+            wnu_console_readline(line, sizeof(line));
 
             shell_execute(line);
 
             print_prompt();
         }
 
-        wildnix_halt();
+        wnu_halt();
     }
 }

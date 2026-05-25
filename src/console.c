@@ -1,12 +1,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "wildnix/console.h"
+#include "wnu/console.h"
 
 #define INPUT_BUFFER_SIZE 256
 
-static struct wildnix_framebuffer *fb;
-static struct wildnix_font *font;
+static struct wnu_framebuffer *fb;
+static struct wnu_font *font;
 
 static size_t cursor_x;
 static size_t cursor_y;
@@ -128,9 +128,9 @@ static void backspace(void) {
     clear_cell(cursor_x, cursor_y);
 }
 
-void wildnix_console_bind(
-    struct wildnix_framebuffer *new_fb,
-    struct wildnix_font *new_font
+void wnu_console_bind(
+    struct wnu_framebuffer *new_fb,
+    struct wnu_font *new_font
 ) {
     fb = new_fb;
     font = new_font;
@@ -161,7 +161,7 @@ void wildnix_console_bind(
     ready = 1;
 }
 
-void wildnix_console_clear(void) {
+void wnu_console_clear(void) {
     if (!ready) {
         return;
     }
@@ -172,7 +172,7 @@ void wildnix_console_clear(void) {
     cursor_y = 0;
 }
 
-void wildnix_console_putchar(char c) {
+void wnu_console_putchar(char c) {
     if (!ready) {
         return;
     }
@@ -193,10 +193,10 @@ void wildnix_console_putchar(char c) {
     }
 
     if (c == '\t') {
-        wildnix_console_putchar(' ');
-        wildnix_console_putchar(' ');
-        wildnix_console_putchar(' ');
-        wildnix_console_putchar(' ');
+        wnu_console_putchar(' ');
+        wnu_console_putchar(' ');
+        wnu_console_putchar(' ');
+        wnu_console_putchar(' ');
         return;
     }
 
@@ -209,27 +209,27 @@ void wildnix_console_putchar(char c) {
     }
 }
 
-void wildnix_console_write(const char *s) {
+void wnu_console_write(const char *s) {
     if (s == 0) {
         return;
     }
 
     for (size_t i = 0; s[i] != '\0'; ++i) {
-        wildnix_console_putchar(s[i]);
+        wnu_console_putchar(s[i]);
     }
 }
 
-void wildnix_console_write_len(const char *s, size_t len) {
+void wnu_console_write_len(const char *s, size_t len) {
     if (s == 0) {
         return;
     }
 
     for (size_t i = 0; i < len; ++i) {
-        wildnix_console_putchar(s[i]);
+        wnu_console_putchar(s[i]);
     }
 }
 
-void wildnix_console_push_input(char c) {
+void wnu_console_push_input(char c) {
     if (!ready) {
         return;
     }
@@ -239,7 +239,7 @@ void wildnix_console_push_input(char c) {
     }
 
     if (c == '\n') {
-        wildnix_console_putchar('\n');
+        wnu_console_putchar('\n');
         input_buffer[input_length] = '\0';
         line_ready = 1;
         return;
@@ -253,7 +253,7 @@ void wildnix_console_push_input(char c) {
         input_length--;
         input_buffer[input_length] = '\0';
 
-        wildnix_console_putchar('\b');
+        wnu_console_putchar('\b');
         return;
     }
 
@@ -264,14 +264,14 @@ void wildnix_console_push_input(char c) {
     input_buffer[input_length++] = c;
     input_buffer[input_length] = '\0';
 
-    wildnix_console_putchar(c);
+    wnu_console_putchar(c);
 }
 
-int wildnix_console_line_ready(void) {
+int wnu_console_line_ready(void) {
     return line_ready;
 }
 
-size_t wildnix_console_readline(char *buffer, size_t size) {
+size_t wnu_console_readline(char *buffer, size_t size) {
     if (buffer == 0 || size == 0) {
         return 0;
     }
