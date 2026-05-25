@@ -128,6 +128,7 @@ void rtl8139_send(const uint8_t *data, size_t len) {
         (uint32_t)phys,
         status
     );
+    wnu_serial_write("rtl8139: send\n");
 
     tx_index = (tx_index + 1) & 3;
 }

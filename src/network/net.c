@@ -4,6 +4,7 @@
 
 #include "wnu/net.h"
 #include "wnu/rtl8139.h"
+#include "wnu/platform.h"
 
 #define ETH_TYPE_ARP  0x0806
 #define ETH_TYPE_IPV4 0x0800
@@ -127,6 +128,7 @@ static void send_icmp_echo(void) {
     rtl8139_send(packet, sizeof(packet));
 
     printf("ping: icmp echo sent\n");
+    wnu_serial_write("ping: icmp echo sent\n");
 }
 
 static void send_udp_packet(void) {
@@ -197,6 +199,7 @@ static void send_udp_packet(void) {
     rtl8139_send(packet, packet_len);
 
     printf("udp: sent to 10.0.2.2:5555\n");
+    wnu_serial_write("udp: sent to 10.0.2.2:5555\n");
 }
 
 static void send_arp_request(void);
@@ -220,6 +223,7 @@ static void request_gateway_mac(int want_icmp, int want_udp) {
     }
 
     printf("net: resolving gateway mac...\n");
+    wnu_serial_write("net: resolving gateway mac...\n");
     send_arp_request();
 }
 
