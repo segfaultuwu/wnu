@@ -2,7 +2,7 @@ CompileFlags:
   Add:
     - -std=c11
     - -ffreestanding
-    - -I/home/segfault/wildnix/wildnix-next/include
+    - -I/home/segfault/wnu/include
     - -I/home/segfault/limine-bin
     - -mno-red-zone
     - -mgeneral-regs-only
