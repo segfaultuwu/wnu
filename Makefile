@@ -47,6 +47,7 @@ LDFLAGS := \
 
 QEMUFLAGS := \
 	-cdrom $(ISO_IMAGE) \
+	-boot order=d \
 	-m 512M \
 	-serial stdio \
 	-display gtk \
@@ -179,6 +180,20 @@ $(DISK_IMAGE): | $(BUILD_DIR)
 		mformat -i $@ :: >/dev/null 2>&1 || { echo "mformat failed"; exit 1; }; \
 	else \
 		echo "no FAT formatter found (mkfs.fat|mkfs.vfat|mformat)"; exit 1; \
+	fi
+
+.PHONY: populate-disk
+populate-disk: $(DISK_IMAGE)
+	@echo "Populating FAT32 disk image: $(DISK_IMAGE)"
+	@if command -v mcopy >/dev/null 2>&1; then \
+		mcopy -i $(DISK_IMAGE) -s build/disk_files/* ::/ || { echo "mcopy failed"; exit 1; }; \
+	elif [ "$(shell id -u)" = "0" ]; then \
+		# mount via loop and copy files (requires root) \
+		mkdir -p /mnt/wnu_disk && mount -o loop $(DISK_IMAGE) /mnt/wnu_disk || { echo "mount failed"; exit 1; }; \
+		cp -r build/disk_files/* /mnt/wnu_disk/ || true; \
+		sync; umount /mnt/wnu_disk; rmdir /mnt/wnu_disk; \
+	else \
+		echo "No suitable tool to populate disk image (need mcopy or root)."; exit 1; \
 	fi
 
 run-disk: $(ISO_IMAGE) $(DISK_IMAGE)

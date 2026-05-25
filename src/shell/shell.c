@@ -7,6 +7,7 @@
 #include "wnu/net.h"
 #include "wnu/vfs.h"
 #include "wnu/sata.h"
+#include "wnu/fat32.h"
 #include <stdlib.h>
 
 #define PATH_MAX 64
@@ -158,6 +159,8 @@ static void print_help(void) {
 	wnu_console_write("  write <path> <text>\n");
 	wnu_console_write("  ping\n");
 	wnu_console_write("  udp\n");
+	wnu_console_write("  lsblk\n");
+	wnu_console_write("  mount <dev> <mountpoint>\n");
 }
 
 void wnu_shell_init(void) {
@@ -343,6 +346,35 @@ void wnu_shell_execute(const char *line) {
 
 	if (string_equal(line, "lsblk")) {
 		wnu_sata_print_devices();
+		return;
+	}
+
+	if (string_equal(line, "mount")) {
+		wnu_console_write("usage: mount <dev> <mountpoint>\n");
+		return;
+	}
+
+	if (string_starts_with(line, "mount ")) {
+		/* mount <dev> <mountpoint> */
+		const char *args = line + 6;
+		/* find space */
+		size_t i = 0;
+		while (args[i] != '\0' && args[i] != ' ') i++;
+		if (args[i] != ' ') {
+			wnu_console_write("usage: mount <dev> <mountpoint>\n");
+			return;
+		}
+		char dev[PATH_MAX];
+		for (size_t j = 0; j < i && j + 1 < PATH_MAX; ++j) dev[j] = args[j];
+		dev[i] = '\0';
+		char mp[PATH_MAX];
+		if (!resolve_path(args + i + 1, mp, PATH_MAX)) {
+			wnu_console_write("mount: invalid mountpoint\n");
+			return;
+		}
+		if (!fat32_mount(dev, mp)) {
+			wnu_console_write("mount: failed\n");
+		}
 		return;
 	}
 
